@@ -1,0 +1,9 @@
+pytest
+coverage
+flask
+python-dotenv
+pytest-cov
+pytest-env
+email-validator
+flask-cors
+ruff

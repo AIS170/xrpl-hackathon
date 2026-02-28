@@ -127,35 +127,37 @@ def setup_demo_portfolio():
     return portfolio_data
 
 
-def get_portfolio_balances(portfolio_wallet_address, issuer_addresses):
+from xrpl.models.requests import AccountInfo, AccountLines
+
+def get_portfolio_balances(portfolio_wallet_address):
     """
-    Returns balances of XRP and all issued currencies for the portfolio wallet.
+    Dynamically fetches all balances (XRP + all Trust Lines) for a wallet.
     """
     # 1. Get XRP balance
-    from xrpl.models.requests import AccountInfo
     account_info = client.request(AccountInfo(
         account=portfolio_wallet_address,
-        ledger_index="validated",
-        strict=True
+        ledger_index="validated"
     )).result
-    xrp_balance = int(account_info['account_data']['Balance']) / 1_000_000  # convert drops → XRP
+    
+    # Convert drops to XRP (1 XRP = 1,000,000 drops)
+    xrp_balance = int(account_info['account_data']['Balance']) / 1_000_000
 
-    # 2. Get issued currency balances using GatewayBalances
-    gb_response = client.request(GatewayBalances(
+    # 2. Get all issued currency balances (Trust Lines)
+    # account_lines returns every currency this account has a trust line for
+    lines_response = client.request(AccountLines(
         account=portfolio_wallet_address,
-        ledger_index="validated",
-        hotwallet=list(issuer_addresses.values())
+        ledger_index="validated"
     )).result
 
-    issued_balances = {}
-    balances_data = gb_response.get("balances", {})
-    for name, addr in issuer_addresses.items():
-        tokens = balances_data.get(addr, {})
-        issued_balances[name] = sum(float(v['value']) for v in tokens.values()) if tokens else 0.0
-
-    # Combine XRP + issued currencies
     balances = {"XRP": xrp_balance}
-    balances.update(issued_balances)
+
+    # 3. Iterate through all trust lines and add them to the balances dict
+    for line in lines_response.get("lines", []):
+        currency = line["currency"]
+        balance = float(line["balance"])
+        # Only show currencies where the balance is non-zero (optional)
+        balances[currency] = balance
+
     return balances
 
 

@@ -7,25 +7,17 @@ app = Flask(__name__)
 CORS(app)
 register_routes(app)
 
+# app.py snippet
 if __name__ == "__main__":
-    # Run this once when the app starts
     print("⚡ Setting up demo portfolio on XRPL Testnet...")
     portfolio_data = setup_demo_portfolio()
-    print("✅ Portfolio setup complete:")
-    print(portfolio_data)
+    
+    # Now we just pass the address; it finds BTC, AUD, and anything else automatically
+    wallet_address = portfolio_data["portfolio_wallet"]["xrpl_address"]
+    balances = get_portfolio_balances(wallet_address)
 
-    # Extract issuer addresses from portfolio_data
-    issuer_addresses = {
-        k: v["xrpl_address"]  # v is the issuer wallet info
-        for k, v in portfolio_data["issuers"].items()
-    }
+    print("💰 Current Portfolio Balances:")
+    for currency, amount in balances.items():
+        print(f"  {currency}: {amount}")
 
-    # Get balances (XRP + issued tokens)
-    balances = get_portfolio_balances(
-        portfolio_data["portfolio_wallet"]["xrpl_address"], issuer_addresses
-    )
-
-    print("💰 Portfolio balances:")
-    print(balances)
-
-    app.run(host="0.0.0.0", port=5002, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

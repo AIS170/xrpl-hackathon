@@ -1,0 +1,21 @@
+{
+    "portfolio_wallet": {
+        "xrpl_address": "rDnRxJwxBT8j8CH3FPXxYeaoqVh6q2peRn",
+        "seed": "sEdTtXzYWbyam6TPiGaJE4NpxtMBtE9"
+    },
+    "issuers": {
+        "BTC": {
+            "xrpl_address": "rpEePCVNMqP5fv1SRNcxFwZGN3LH7zk2H9",
+            "seed": "sEdT55xQBYdckxRUhj2QS2zWpLLnzMj"
+        },
+        "AUD": {
+            "xrpl_address": "rU94jzVYqKduXSEhDsbLD2Zt6hfWJzNhQJ",
+            "seed": "sEdTSHGdVLmkAxmzyFLkw3p2C7eg2fZ"
+        }
+    },
+    "tokens": {
+        "BTC": 5,
+        "AUD": 5000
+    },
+    "history": []
+}

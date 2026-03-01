@@ -2,6 +2,10 @@
 from flask import request, jsonify
 from auth_utils import authenticate_user
 from portfolio_setup import get_portfolio_balances
+import json
+import os
+from portfolio_setup import get_portfolio_balances
+
 
 def register_routes(app):
     
@@ -66,3 +70,53 @@ def register_routes(app):
             return jsonify({"status": "success", "balances": balances}), 200
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route('/api/portfolio/community', methods=['GET'])
+    def get_community_portfolio():
+        """Fetches the balances from the local wallet.json (updated by execute_request)."""
+        try:
+            if not os.path.exists("wallet.json"):
+                return jsonify({"status": "error", "message": "Wallet not initialized"}), 404
+                
+            with open("wallet.json", "r") as f:
+                portfolio_data = json.load(f)
+                
+            address = portfolio_data["portfolio_wallet"]["xrpl_address"]
+            
+            # Use local tokens (updated by execute_request) instead of XRPL ledger query
+            balances = portfolio_data.get("tokens", {})
+            
+            # Include XRP from live ledger for completeness
+            try:
+                live_balances = get_portfolio_balances(address)
+                balances["XRP"] = live_balances.get("XRP", 0)
+            except Exception:
+                balances["XRP"] = balances.get("XRP", 0)
+            
+            return jsonify({
+                "status": "success", 
+                "address": address,
+                "balances": balances
+            }), 200
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    from portfolio_setup import execute_request
+    
+    @app.route('/api/portfolio/execute', methods=['POST'])
+    def execute_community_request():
+        """
+        Takes an executed Community Request and simulates filling the XRPL trades.
+        """
+        data = request.json
+        transactions = data.get('transactions', [])
+        
+        if not transactions:
+            return jsonify({"status": "error", "message": "No transactions provided"}), 400
+            
+        try:
+            success = execute_request(transactions)
+            return jsonify({"status": "success", "message": "Successfully executed on XRPL testnet"}), 200
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+

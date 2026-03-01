@@ -41,19 +41,29 @@ def create_trust_line(account_seed, issuer_address, currency, limit="1000"):
 
 def send_issued_token(from_seed, to_address, issuer_address, currency, amount):
     """
-    Sends issued currency from issuer wallet → portfolio wallet.
+    Sends issued currency from issuer wallet → portfolio wallet or vice versa.
+    If the destination is the issuer, it essentially 'burns' the token back.
     """
     wallet = Wallet.from_seed(from_seed)
+    issued_currency_amount = IssuedCurrencyAmount(
+        currency=currency,
+        issuer=issuer_address,
+        value=str(amount)
+    )
+    
     payment_tx = Payment(
         account=wallet.classic_address,
         destination=to_address,
-        amount=IssuedCurrencyAmount(
-            currency=currency,
-            issuer=issuer_address,
-            value=str(amount)
-        ),
+        amount=issued_currency_amount,
+        send_max=issued_currency_amount, # Important for solving tecPATH_PARTIAL when sending back to issuer
+        flags=131072 # tfNoRippleDirect
     )
+    
     response = submit_and_wait(payment_tx, client, wallet)
+    
+    if "tesSUCCESS" not in response.result.get("meta", {}).get("TransactionResult", ""):
+        raise Exception(f"Transaction failed: {response.result.get('meta', {}).get('TransactionResult')}")
+        
     return response
 
 
@@ -160,6 +170,64 @@ def get_portfolio_balances(portfolio_wallet_address):
 
     return balances
 
+import json
+import os
+from datetime import datetime
+
+def execute_request(transactions):
+    """
+    Simulates executing a list of community-approved transactions
+    by updating the local wallet.json balances directly.
+    
+    Note: Real XRPL testnet transactions are constrained by demo 
+    trust-line limits (AUD: 10k, BTC: 100). For the hackathon demo, 
+    we update balances locally. XRPL integration is proven through 
+    wallet creation, trust lines, and live balance queries.
+    """
+    if not os.path.exists("wallet.json"):
+        raise Exception("Wallet not initialized")
+        
+    with open("wallet.json", "r") as f:
+        wallet_data = json.load(f)
+    
+    tokens = wallet_data.get("tokens", {})
+    
+    if "history" not in wallet_data:
+        wallet_data["history"] = []
+    
+    for t in transactions:
+        t_type = t.get("type", "BUY")
+        asset = t.get("asset", "BTC")
+        amount = float(t.get("amount", 0))
+        impact_aud = float(t.get("impactAud", 0))
+        
+        if t_type == "BUY":
+            # Deduct AUD, add asset
+            tokens["AUD"] = tokens.get("AUD", 0) - impact_aud
+            tokens[asset] = tokens.get(asset, 0) + amount
+            print(f"✅ BUY: -{impact_aud} AUD, +{amount} {asset}")
+            
+        elif t_type == "SELL":
+            # Deduct asset, add AUD
+            tokens[asset] = tokens.get(asset, 0) - amount
+            tokens["AUD"] = tokens.get("AUD", 0) + impact_aud
+            print(f"✅ SELL: -{amount} {asset}, +{impact_aud} AUD")
+            
+        wallet_data["history"].append({
+            "timestamp": datetime.utcnow().isoformat(),
+            "type": t_type,
+            "asset": asset,
+            "amount": amount,
+            "impactAud": impact_aud
+        })
+    
+    wallet_data["tokens"] = tokens
+        
+    with open("wallet.json", "w") as f:
+        json.dump(wallet_data, f, indent=4)
+    
+    print(f"💰 Updated balances: {tokens}")
+    return True
 
 if __name__ == "__main__":
     setup_demo_portfolio()

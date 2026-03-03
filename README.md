@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Main dasboard
+  Main dashboard
 </p>
 
 ## Overview

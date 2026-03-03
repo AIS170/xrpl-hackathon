@@ -1,4 +1,3 @@
-# auth_utils.py
 from firebase_admin import auth
 from db import get_or_create_user
 

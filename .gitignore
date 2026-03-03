@@ -6,4 +6,4 @@ htmlcov/
 .env.test
 .env.local
 src/service-account.json
-
+.vscode/

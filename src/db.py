@@ -1,9 +1,8 @@
-# db.py
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
 
-# Initialize Firebase Admin SDK (use your service account JSON)
+# Initialize Firebase Admin SDK
 cred_path = os.path.join(os.path.dirname(__file__), "service-account.json")
 
 cred = credentials.Certificate(cred_path)
@@ -23,7 +22,6 @@ def get_or_create_user(uid, email):
     if doc.exists:
         user_data = doc.to_dict()
     else:
-        # MVP default role = 'viewer'
         user_data = {
             "uid": uid,
             "email": email,
